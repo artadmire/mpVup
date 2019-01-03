@@ -1,6 +1,7 @@
 <template>
   <div class="counter-warp">
     <Card v-for="(item,index) in booklist" :key="index" :book="item"></Card>
+    <p v-if="!more">没有更多数据</p>
   </div>
 </template>
 
@@ -8,44 +9,74 @@
 // Use Vuex
 import store from "./store";
 import { get } from "@/utils/request";
-import Card from "@/components/card"
+import Card from "@/components/card";
 export default {
-  data(){
+  data() {
     return {
-      booklist:[]
-    }
+      booklist: [],
+      init: true,
+      currentPage: 1,
+      more: true,
+      pageSize: 0
+    };
   },
-  components:{
+  components: {
     Card
   },
-  created() {
-  },
-  mounted (){
-    this.getList();
+  created() {},
+  mounted() {
+    this.getList(this.init);
   },
   computed: {
     // count () {
     //   return store.state.count
     // }
   },
-  methods: {
-    async getList(){
-      const wip = await get("/weapp/booklist");
-      console.log(wip,"wip");
-      this.booklist = wip.data.list;
+  onPullDownRefresh() {
+    console.log("下拉");
+    this.getList(this.init);
+    // wx.startPullDownRefresh({
+    //   success:function(){
+    //     consolel.og(2);
+    //   }
+    // });
+  },
+  onShow() {
+    console.log("onshow");
+  },
+  onReachBottom() {
+    console.log("到底了");
+    if(!this.more) {
+      return
+    }else {
+      this.currentPage +=1
+      this.getList(false)
     }
-    // increment () {
-    //   store.commit('increment')
-    // },
-    // decrement () {
-    //   store.commit('decrement')
-    // }
+  },
+  methods: {
+    async getList(init) {
+      if (init) {
+        this.currentPage = 0;
+        this.more = true;
+      }
+      wx.showNavigationBarLoading();
+      const wip = await get("/weapp/booklist?", { page: this.currentPage });
+      console.log(wip, "wip");
+      if (wip.data.list.length < 7) {
+        this.more = false;
+      }
+      if (init) {
+        this.booklist = wip.data.list;
+      } else {
+        this.booklist = this.booklist.concat(wip.data.list);
+      }
+      wx.hideNavigationBarLoading();
+    }
   }
 };
 </script>
 
 <style>
-
 .home {
   display: inline-block;
   margin: 100px auto;
